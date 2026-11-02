@@ -1,0 +1,128 @@
+---
+title: "ec422_ps3_woolfolk"
+author: "Jackson W"
+date: "2026-10-27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+### 2. Time Series Data
+library(tidyverse)
+## 2.2
+## a.
+#retail_raw <- read.csv("data/retail_sales_raw.csv")
+#head(retail_raw)
+## b.
+retail_raw <- read_csv(
+  "data/retail_sales_raw.csv",
+  na = ".",
+  col_types = cols(
+    observation_date = col_date(format = "%Y-%m-%d"),
+    RSAFS = col_double(),
+    RSAFSNA = col_double()
+  )
+)
+head(retail_raw)
+
+## 2.3
+retail_raw_long <- retail_raw |>
+  select(observation_date, RSAFS, RSAFSNA) |>
+  pivot_longer(cols = c(RSAFS, RSAFSNA), names_to = "series_id", values_to = "sales")
+head(retail_raw_long)
+
+## 2.4
+library(fpp3)
+
+retail_ts <- retail_raw_long |>
+  mutate(Month = yearmonth(observation_date)) |>
+  as_tsibble(index = Month, key = series_id)
+head(retail_ts)
+
+## 2.5
+### a.
+head(canadian_gas)
+key_vars(canadian_gas)
+index_var(canadian_gas)
+### b.
+can_gas <- canadian_gas |>
+  select(Month, Volume)
+
+has_gaps(can_gas)
+head(can_gas)
+
+## 2.6
+### a.
+can_gas_recent <- can_gas |>
+  filter(Month >= yearmonth("1990 Jan"))
+
+head(can_gas_recent)
+### b.
+can_gas_recent <- can_gas_recent |>
+  mutate(year    = year(Month),
+         month   = month(Month, label = TRUE),
+         quarter = quarter(Month))
+head(can_gas_recent)
+
+can_gas_recent |>
+  as_tibble() |>
+  group_by(month) |>
+  summarize(avg_volume = mean(Volume))
+### c.
+can_gas_recent |>
+  mutate(next_month           = Month + 1,
+         same_month_last_year = Month - 12) |>
+  head()
+### d.
+can_gas_q <- can_gas |>
+  filter(Month <= yearmonth("2004 Dec")) |>
+  index_by(Quarter = yearquarter(Month)) |>
+  summarize(Volume = sum(Volume))
+
+head(can_gas_q)
+can_gas_q |> autoplot(Volume)
+
+## 2.7
+### a.
+retail_ts |> autoplot(sales)
+### b.
+retail_ts |>
+  autoplot(sales) +
+  labs(
+    title = "U.S. Retail and Food Services Sales",
+    subtitle = "Seasonally adjusted vs. not seasonally adjusted",
+    x = NULL, y = "Millions of dollars", color = NULL
+  ) +
+  theme_minimal()
+
+The NSA series displays a prominent, sharp spike every December due to holiday shopping, followed by a drop in January. The SA series removes this predictable annual spike, smoothing out the intraday seasonal swings so that the underlying economic trend and recessionary drops are clearer.
+
+### c.
+can_gas |> 
+  autoplot(Volume) +
+  labs(
+    title = "Canadian Natural Gas Production (1960–2005)",
+    x = NULL, 
+    y = "Volume (Billions of cubic meters)"
+  ) +
+  theme_minimal()
+  
+### d.
+can_gas |> 
+  autoplot(Volume) +
+  geom_smooth(se = FALSE, color = "blue", linetype = "dashed") +
+  labs(
+    title = "Canadian Natural Gas Production with Trend Line",
+    x = NULL, 
+    y = "Volume (Billions of cubic meters)"
+  ) +
+  theme_minimal()
+  
+Added geom_smooth() to overlay a non-linear trend line across the entire historical period, making it easy to identify long-term structural increases in output over time.
+
+## 3. Data Transformation
+### a.
+
+### b.
+
